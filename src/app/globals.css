@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* -------------------------------------------
+   You can add your own global styles below.
+   Tailwind's layers (base, components, utilities)
+   must come first.
+-------------------------------------------- */
+
+/* Example: Set a default font family */
+body {
+  font-family: sans-serif;
+  background-color: #ffffff;
+  color: #000000;
+  margin: 0;
+  padding: 0;
+}
