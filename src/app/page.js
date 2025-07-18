@@ -6,13 +6,36 @@ import DownloadOptions from "../components/DownloadOptions";
 export default function Home() {
   // State for available download options
   const [options, setOptions] = useState([]);
+  // New state for loading and error
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleDownload = (url) => {
+  const handleDownload = async (url) => {
     console.log("URL submitted:", url);
+    // Reset state at the start
+    setLoading(true);
+    setError(null);
+    setOptions([]);
 
-    // In the future, you might fetch available formats from an API here.
-    // For now, we just set mock options:
-    setOptions(["MP4 720p", "MP4 1080p", "Audio Only"]);
+    try {
+      const res = await fetch(`/api/getOptions?url=${encodeURIComponent(url)}`);
+      if (!res.ok) {
+        console.error("API error:", res.status);
+        setError("Unable to fetch download options.");
+        setLoading(false);
+        return;
+      }
+      const data = await res.json();
+      console.log("API response:", data);
+      if (data.options) {
+        setOptions(data.options);
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -23,7 +46,11 @@ export default function Home() {
 
       <InputSection onSubmit={handleDownload} />
 
-      {/* Render options only if we have some */}
+      {/* Show loading, error, or options */}
+      {loading && (
+        <p className="text-blue-500 mt-4 animate-pulse">Loading options...</p>
+      )}
+      {error && <p className="text-red-500 mt-4">{error}</p>}
       {options.length > 0 && <DownloadOptions options={options} />}
     </main>
   );
