@@ -9,6 +9,8 @@ export default function Home() {
   // New state for loading and error
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Track the current URL so we can pass it to DownloadOptions
+  const [currentUrl, setCurrentUrl] = useState("");
 
   const handleDownload = async (url) => {
     console.log("URL submitted:", url);
@@ -16,6 +18,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setOptions([]);
+    setCurrentUrl(url); // store the URL for later
 
     try {
       const res = await fetch(`/api/getOptions?url=${encodeURIComponent(url)}`);
@@ -51,7 +54,9 @@ export default function Home() {
         <p className="text-blue-500 mt-4 animate-pulse">Loading options...</p>
       )}
       {error && <p className="text-red-500 mt-4">{error}</p>}
-      {options.length > 0 && <DownloadOptions options={options} />}
+      {options.length > 0 && (
+        <DownloadOptions options={options} url={currentUrl} />
+      )}
     </main>
   );
 }
