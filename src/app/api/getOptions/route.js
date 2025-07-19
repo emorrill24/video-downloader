@@ -1,52 +1,49 @@
 import ytdl from '@distube/ytdl-core';
 
 export async function GET(req) {
-  console.log('API called'); // ✅ debug
+  const { searchParams } = new URL(req.url);
+  const videoUrl = searchParams.get('url');
+
+  console.log('URL received:', videoUrl);
+
+  if (!videoUrl) {
+    return new Response('Missing URL parameter', { status: 400 });
+  }
+
   try {
-    const { searchParams } = new URL(req.url);
-    const videoUrl = searchParams.get('url');
-    console.log('URL received:', videoUrl); // ✅ debug
-
-    if (!videoUrl || !ytdl.validateURL(videoUrl)) {
-      console.error('Invalid URL:', videoUrl);
-      return new Response(JSON.stringify({ error: 'Invalid YouTube URL' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
     const info = await ytdl.getInfo(videoUrl);
-    console.log('Fetched info title:', info.videoDetails.title); // ✅ debug
 
-    const formats = ytdl.filterFormats(info.formats, 'audioandvideo');
+    // Filter progressive formats (video + audio together)
+    const progressive = ytdl.filterFormats(info.formats, 'videoandaudio');
+
+    // Pick only mp4 formats with video & audio
+    const mp4Formats = progressive.filter(
+      (f) => f.container === 'mp4' && f.hasAudio && f.hasVideo
+    );
+
+    // For MVP: just grab a 360p if available
+    const lowRes = mp4Formats.find((f) => f.qualityLabel === '360p');
+
+    // Also find an audio-only format
     const audioFormats = ytdl.filterFormats(info.formats, 'audioonly');
+    const audio = audioFormats.length > 0 ? audioFormats[0] : null;
 
+    // Build response
     const options = [];
-    const mp4Formats = formats.filter((f) => f.container === 'mp4' && f.hasVideo);
-    const uniqueQualities = new Set();
-
-    for (const f of mp4Formats) {
-      if (!uniqueQualities.has(f.qualityLabel)) {
-        uniqueQualities.add(f.qualityLabel);
-        options.push(`MP4 ${f.qualityLabel}`);
-      }
-      if (options.length >= 3) break;
+    if (lowRes) {
+      options.push({ label: lowRes.qualityLabel, url: lowRes.url });
+    }
+    if (audio) {
+      options.push({ label: 'Audio Only', url: audio.url });
     }
 
-    if (audioFormats.length > 0) {
-      options.push('Audio Only');
-    }
+    console.log('Options prepared:', options);
 
-    console.log('Options ready:', options); // ✅ debug
     return new Response(JSON.stringify({ options }), {
-      status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    console.error('API Error:', err); // ✅ debug
-    return new Response(JSON.stringify({ error: 'Failed to fetch video info' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('API Error:', err);
+    return new Response('Internal Server Error', { status: 500 });
   }
 }
